@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -64,7 +65,11 @@ func main() {
 	db, _ = xsuportal.GetDB()
 	db.SetMaxOpenConns(10)
 
-	srv.Use(middleware.Logger())
+	logger := middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: logFormat(),
+		Output: os.Stdout,
+	})
+	srv.Use(logger)
 	srv.Use(middleware.Recover())
 	srv.Use(session.Middleware(sessions.NewCookieStore([]byte("tagomoris"))))
 
@@ -1609,4 +1614,11 @@ func toTimestamp(t sql.NullTime) *timestamppb.Timestamp {
 		return timestamppb.New(t.Time)
 	}
 	return nil
+}
+
+func logFormat() string {
+	return `{"time":"${time_rfc3339_nano}","id":"${id}","remote_ip":"${remote_ip}",` +
+		`"host":"${host}","method":"${method}","uri":"${uri}","user_agent":"${user_agent}",` +
+		`"status":${status},"error":"${error}","response_time":${latency},"response_time_human":"${latency_human}"` +
+		`,"bytes_in":${bytes_in},"body_bytes":${bytes_out}}` + "\n"
 }
