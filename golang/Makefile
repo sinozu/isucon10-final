@@ -19,8 +19,8 @@ clean: ## Cleanup files
 
 .PHONY: restart
 restart: ## Service Restart
-        sudo systemctl restart xsuportal-web-golang.service
-        sudo systemctl restart xsuportal-api-golang.service
+	sudo systemctl restart xsuportal-web-golang.service
+	sudo systemctl restart xsuportal-api-golang.service
 
 .PHONY: help
 help: ## Show help
