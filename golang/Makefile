@@ -6,7 +6,7 @@ COMPILER=go
 GOFILES=$(wildcard ./*.go ./**/*.go)
 
 .PHONY: all
-all: clean build ## Cleanup and Build
+all: clean build restart ## Cleanup and Build
 
 .PHONY: build
 build: $(GOFILES) ## Build executable files
@@ -16,6 +16,11 @@ build: $(GOFILES) ## Build executable files
 .PHONY: clean
 clean: ## Cleanup files
 	@$(RM) -r $(BINDIR)
+
+.PHONY: restart
+restart: ## Service Restart
+        sudo systemctl restart xsuportal-web-golang.service
+        sudo systemctl restart xsuportal-api-golang.service
 
 .PHONY: help
 help: ## Show help
