@@ -193,6 +193,7 @@ func (*AdminService) Initialize(e echo.Context) error {
 			return fmt.Errorf("insert contest: %w", err)
 		}
 	}
+	memoryCache.Delete("contest_config")
 
 	host := util.GetEnv("BENCHMARK_SERVER_HOST", "localhost")
 	port, _ := strconv.Atoi(util.GetEnv("BENCHMARK_SERVER_PORT", "50051"))
@@ -1224,12 +1225,28 @@ func getCurrentContestStatus(e echo.Context, db sqlx.Queryer) (*xsuportal.Contes
 	if x, found := memoryCache.Get(cacheKey); found {
 		contestStatus = x.(xsuportal.ContestStatus)
 	} else {
-		err := sqlx.Get(db, &contestStatus, "SELECT *, NOW(6) AS `current_time`, CASE WHEN NOW(6) < `registration_open_at` THEN 'standby' WHEN `registration_open_at` <= NOW(6) AND NOW(6) < `contest_starts_at` THEN 'registration' WHEN `contest_starts_at` <= NOW(6) AND NOW(6) < `contest_ends_at` THEN 'started' WHEN `contest_ends_at` <= NOW(6) THEN 'finished' ELSE 'unknown' END AS `status`, IF(`contest_starts_at` <= NOW(6) AND NOW(6) < `contest_freezes_at`, 1, 0) AS `frozen` FROM `contest_config`")
+		err := sqlx.Get(db, &contestStatus, "SELECT * FROM `contest_config`")
 		if err != nil {
 			return nil, fmt.Errorf("query contest status: %w", err)
 		}
 		memoryCache.Set(cacheKey, contestStatus, cache.DefaultExpiration)
 	}
+
+	// ステータス判定
+	contestStatus.CurrentTime = time.Now()
+
+	if contestStatus.CurrentTime.Unix() < contestStatus.RegistrationOpenAt.Unix() {
+		contestStatus.StatusStr = "standby"
+	} else if contestStatus.RegistrationOpenAt.Unix() <= contestStatus.CurrentTime.Unix() && contestStatus.CurrentTime.Unix() < contestStatus.ContestStartsAt.Unix() {
+		contestStatus.StatusStr = "registration"
+	} else if contestStatus.ContestStartsAt.Unix() <= contestStatus.CurrentTime.Unix() && contestStatus.CurrentTime.Unix() < contestStatus.ContestEndsAt.Unix() {
+		contestStatus.StatusStr = "started"
+	} else if contestStatus.ContestEndsAt.Unix() <= contestStatus.CurrentTime.Unix() {
+		contestStatus.StatusStr = "finished"
+	} else {
+		contestStatus.StatusStr = "unknown"
+	}
+
 	statusStr := contestStatus.StatusStr
 	if e.Echo().Debug {
 		b, err := ioutil.ReadFile(DebugContestStatusFilePath)
