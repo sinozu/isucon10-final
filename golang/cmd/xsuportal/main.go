@@ -24,6 +24,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/patrickmn/go-cache"
+	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	xsuportal "github.com/isucon/isucon10-final/webapp/golang"
@@ -49,6 +50,7 @@ const (
 var db *sqlx.DB
 var notifier xsuportal.Notifier
 var memoryCache *cache.Cache
+var group singleflight.Group
 
 func main() {
 	srv := echo.New()
@@ -65,7 +67,7 @@ func main() {
 	}
 
 	db, _ = xsuportal.GetDB()
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(100)
 
 	memoryCache = cache.New(time.Duration(5)*time.Minute, 0)
 
@@ -1139,12 +1141,14 @@ func (*AudienceService) ListTeams(e echo.Context) error {
 }
 
 func (*AudienceService) Dashboard(e echo.Context) error {
-	leaderboard, err := makeLeaderboardPB(e, 0)
+	leaderboard, err, _ := group.Do("audienceMakeLeaderboardPB", func() (interface{}, error) {
+		return makeLeaderboardPB(e, 0)
+	})
 	if err != nil {
 		return fmt.Errorf("make leaderboard: %w", err)
 	}
 	return writeProto(e, http.StatusOK, &audiencepb.DashboardResponse{
-		Leaderboard: leaderboard,
+		Leaderboard: leaderboard.(*resourcespb.Leaderboard),
 	})
 }
 
