@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,6 +24,7 @@ import (
 )
 
 var db *sqlx.DB
+var memoryCache *cache.Cache
 
 type benchmarkQueueService struct {
 }
@@ -82,9 +84,15 @@ func (b *benchmarkQueueService) ReceiveBenchmarkJob(ctx context.Context, req *be
 			}
 
 			var contestStartsAt time.Time
-			err = tx.Get(&contestStartsAt, "SELECT `contest_starts_at` FROM `contest_config` LIMIT 1")
-			if err != nil {
-				return false, fmt.Errorf("get contest starts at: %w", err)
+			cacheKey := "contest_starts_at"
+			if x, found := memoryCache.Get(cacheKey); found {
+				contestStartsAt = x.(time.Time)
+			} else {
+				err = tx.Get(&contestStartsAt, "SELECT `contest_starts_at` FROM `contest_config` LIMIT 1")
+				if err != nil {
+					return false, fmt.Errorf("get contest starts at: %w", err)
+				}
+				memoryCache.Set(cacheKey, contestStartsAt, cache.DefaultExpiration)
 			}
 
 			if err := tx.Commit(); err != nil {
@@ -279,7 +287,10 @@ func main() {
 	log.Print("[INFO] listen ", address)
 
 	db, _ = xsuportal.GetDB()
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(100)
+
+	memoryCache = cache.New(time.Duration(5)*time.Minute, 0)
+	memoryCache.Delete("contest_config")
 
 	server := grpc.NewServer()
 
