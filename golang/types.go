@@ -117,3 +117,12 @@ func (t *LeaderBoardTeam) Team() *Team {
 		Student:   t.Student,
 	}
 }
+
+type TeamMemberCount struct {
+	MemberCount  int64 `db:"member_count"`
+	StudentCount int64 `db:"student_count"`
+}
+
+func (t *TeamMemberCount) IsStudentTeam() bool {
+	return t.MemberCount == t.StudentCount
+}
