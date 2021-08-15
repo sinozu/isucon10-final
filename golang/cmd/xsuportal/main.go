@@ -59,7 +59,7 @@ func main() {
 	srv.Debug = true
 	// NewRelic
 	newrelicAppName := os.Getenv("Xsuportal-uozumi-test") // example: isucon10-qualify
-	newrelicLicense := os.Getenv("NEW_RELIC_LICENSE")
+	newrelicLicense := os.Getenv("NEW_RELIC_LICENSE_KEY")
 	err := apm.Setup(newrelicAppName, newrelicLicense)
 	if err != nil {
 		srv.Logger.Fatalf("failed to NewRelic: %s.", err.Error())
