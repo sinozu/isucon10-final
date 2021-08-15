@@ -24,8 +24,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	nrecho "github.com/newrelic/go-agent/v3/integrations/nrecho-v4"
-	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/patrickmn/go-cache"
+	"github.com/sinozu/newrelic_apm/apm"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -55,16 +55,20 @@ var memoryCache *cache.Cache
 var group singleflight.Group
 
 func main() {
-	app, _ := newrelic.NewApplication(
-		newrelic.ConfigAppName("Xsuportal-uozumi-test"),
-		newrelic.ConfigFromEnvironment(),
-		newrelic.ConfigDistributedTracerEnabled(true),
-		newrelic.ConfigDebugLogger(os.Stdout),
-	)
-
-	// TODO: Logs in Context
 	srv := echo.New()
-	srv.Use(echo.MiddlewareFunc(nrecho.Middleware(app)))
+	srv.Debug = true
+	// NewRelic
+	newrelicAppName := os.Getenv("Xsuportal-uozumi-test") // example: isucon10-qualify
+	newrelicLicense := os.Getenv("NEW_RELIC_LICENSE")
+	err := apm.Setup(newrelicAppName, newrelicLicense)
+	if err != nil {
+		srv.Logger.Fatalf("failed to NewRelic: %s.", err.Error())
+	}
+
+	if apm.GetApp() != nil {
+		srv.Use(nrecho.Middleware(apm.GetApp()))
+	}
+	// TODO: Logs in Context
 
 	srv.Debug = util.GetEnv("DEBUG", "") != ""
 	srv.Server.Addr = fmt.Sprintf(":%v", util.GetEnv("PORT", "9292"))

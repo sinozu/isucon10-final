@@ -16,7 +16,9 @@ require (
 	github.com/newrelic/go-agent/v3/integrations/nrecho-v3 v1.0.1
 	github.com/newrelic/go-agent/v3/integrations/nrecho-v4 v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/sinozu/newrelic_apm v0.0.0-20210815065115-b0061544badd
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20200930160638-afb6bcd081ae // indirect
 	golang.org/x/net v0.0.0-20200930145003-4acb6c075d10 // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
