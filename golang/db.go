@@ -3,7 +3,6 @@ package xsuportal
 import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/sinozu/newrelic_apm/apm"
 
 	"github.com/isucon/isucon10-final/webapp/golang/util"
 )
@@ -19,8 +18,6 @@ func GetDB() (*sqlx.DB, error) {
 		"time_zone": "'+00:00'",
 	}
 	mysqlConfig.ParseTime = true
-
-	apm.SetupDB(util.GetEnv("MYSQL_HOSTNAME", "127.0.0.1"), util.GetEnv("MYSQL_PORT", "3306"), util.GetEnv("MYSQL_DATABASE", "xsuportal"))
 
 	return sqlx.Open("mysql", mysqlConfig.FormatDSN())
 }

@@ -68,6 +68,7 @@ func main() {
 	if apm.GetApp() != nil {
 		srv.Use(nrecho.Middleware(apm.GetApp()))
 	}
+
 	// TODO: Logs in Context
 
 	srv.Debug = util.GetEnv("DEBUG", "") != ""
@@ -1155,7 +1156,10 @@ type AudienceService struct{}
 
 func (*AudienceService) ListTeams(e echo.Context) error {
 	var teams []xsuportal.Team
+	t := apm.StartTransaction("ListTeams")
+	s := apm.StartDatastoreSegment(t, "SELECT * FROM `teams` WHERE `withdrawn` = FALSE ORDER BY `created_at` DESC")
 	err := db.Select(&teams, "SELECT * FROM `teams` WHERE `withdrawn` = FALSE ORDER BY `created_at` DESC")
+	defer s.End()
 	if err != nil {
 		return fmt.Errorf("select teams: %w", err)
 	}
@@ -1540,7 +1544,7 @@ func makeLeaderboardPB(e echo.Context, teamID int64) (*resourcespb.Leaderboard, 
 	t := apm.StartTransaction("makeLeaderboardPB")
 	s := apm.StartDatastoreSegment(t, query, teamID, teamID, contestFinished, contestFreezesAt, teamID, teamID, contestFinished, contestFreezesAt)
 	err = tx.Select(&leaderboard, query, teamID, teamID, contestFinished, contestFreezesAt, teamID, teamID, contestFinished, contestFreezesAt)
-	s.End()
+	defer s.End()
 	if err != sql.ErrNoRows && err != nil {
 		return nil, fmt.Errorf("select leaderboard: %w", err)
 	}
