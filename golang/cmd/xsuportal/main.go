@@ -58,7 +58,7 @@ func main() {
 	srv := echo.New()
 	srv.Debug = true
 	// NewRelic
-	newrelicAppName := os.Getenv("Xsuportal-uozumi-test") // example: isucon10-qualify
+	newrelicAppName := "Xsuportal-uozumi-test"
 	newrelicLicense := os.Getenv("NEW_RELIC_LICENSE_KEY")
 	err := apm.Setup(newrelicAppName, newrelicLicense)
 	if err != nil {
@@ -1535,7 +1535,12 @@ func makeLeaderboardPB(e echo.Context, teamID int64) (*resourcespb.Leaderboard, 
 		"ORDER BY\n" +
 		"  `latest_score` DESC,\n" +
 		"  `latest_score_marked_at` ASC\n"
+
+	// tx is parent APM transaction
+	t := apm.StartTransaction("makeLeaderboardPB")
+	s := apm.StartDatastoreSegment(t, query, teamID, teamID, contestFinished, contestFreezesAt, teamID, teamID, contestFinished, contestFreezesAt)
 	err = tx.Select(&leaderboard, query, teamID, teamID, contestFinished, contestFreezesAt, teamID, teamID, contestFinished, contestFreezesAt)
+	s.End()
 	if err != sql.ErrNoRows && err != nil {
 		return nil, fmt.Errorf("select leaderboard: %w", err)
 	}
